@@ -3,4 +3,7 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
-runs/
+/runs/
+
+# But include the dare/runs package (source code)
+!dare/runs/
