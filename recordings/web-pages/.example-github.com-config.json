@@ -1,0 +1,9 @@
+{
+  "target_url": "https://github.com",
+  "target_type": "web-page",
+  "platform": "browser-chrome",
+  "authentication": "oauth",
+  "requires_env_vars": ["GITHUB_EMAIL", "GITHUB_PASSWORD"],
+  "timeout_seconds": 30,
+  "notes": "GitHub login and repo creation workflows"
+}

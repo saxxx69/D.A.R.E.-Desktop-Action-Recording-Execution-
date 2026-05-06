@@ -1,0 +1,11 @@
+{
+  "target_url": "https://demo.binance.com",
+  "target_type": "web-page",
+  "platform": "browser-chrome",
+  "account_type": "demo-sandbox",
+  "authentication": "email-password",
+  "requires_env_vars": ["BINANCE_DEMO_EMAIL", "BINANCE_DEMO_PASSWORD"],
+  "timeout_seconds": 60,
+  "trading_pairs": ["BTCUSDT", "ETHUSDT", "BNBUSDT"],
+  "notes": "Binance Demo platform for risk-free trading automation testing"
+}

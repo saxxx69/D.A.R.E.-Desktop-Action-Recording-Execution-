@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dare"
+version = "0.1.0"
+description = "D.A.R.E. - Desktop Action Recording Execution. Record, normalize, classify, and execute desktop interactions via LLM."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "D.A.R.E. Contributors"}]
+keywords = ["desktop-automation", "llm", "mcp", "recording", "execution"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "Pillow>=10",
+    "pynput>=1.7",
+    "fastmcp>=0.2",
+]
+
+[project.scripts]
+dare = "dare.server:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["dare*"]
+
+[tool.setuptools.package-data]
+dare = ["py.typed"]

@@ -1,0 +1,3 @@
+Pillow>=10
+pynput>=1.7
+fastmcp>=0.2

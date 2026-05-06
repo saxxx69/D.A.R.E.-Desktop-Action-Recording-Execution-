@@ -1,0 +1,159 @@
+"""Tests for ActivityMonitor.
+
+The monitor's loop is time-driven, but we don't need to spin real wall
+clock for unit tests: we inject a fake clock and call the public API
+directly. The only tests that exercise the watcher thread use very small
+timeouts.
+"""
+
+from __future__ import annotations
+
+import time
+
+import pytest
+
+from dare.recorder.activity_monitor import ActivityMonitor
+
+
+class FakeClock:
+    def __init__(self, t: float = 0.0) -> None:
+        self.t = t
+
+    def __call__(self) -> float:
+        return self.t
+
+    def advance(self, dt: float) -> None:
+        self.t += dt
+
+
+def test_initial_state() -> None:
+    am = ActivityMonitor(on_stop=lambda r: None)
+    assert not am.stopped
+    assert am.stop_reason is None
+
+
+def test_mark_activity_resets_idle() -> None:
+    clock = FakeClock(100.0)
+    am = ActivityMonitor(on_stop=lambda r: None, clock=clock)
+    clock.advance(20.0)
+    assert pytest.approx(am.seconds_idle()) == 20.0
+    am.mark_activity()
+    assert pytest.approx(am.seconds_idle()) == 0.0
+
+
+def test_double_esc_within_window_triggers_stop() -> None:
+    seen: list[str] = []
+    clock = FakeClock(0.0)
+    am = ActivityMonitor(
+        on_stop=seen.append,
+        double_esc_window=0.5,
+        clock=clock,
+    )
+    am.mark_esc()           # first ESC
+    clock.advance(0.3)      # within window
+    triggered = am.mark_esc()
+    assert triggered is True
+    assert am.stopped
+    assert am.stop_reason == "double_esc"
+    assert seen == ["double_esc"]
+
+
+def test_double_esc_outside_window_does_not_stop() -> None:
+    seen: list[str] = []
+    clock = FakeClock(0.0)
+    am = ActivityMonitor(
+        on_stop=seen.append,
+        double_esc_window=0.5,
+        clock=clock,
+    )
+    am.mark_esc()
+    clock.advance(1.0)      # outside window
+    triggered = am.mark_esc()
+    assert triggered is False
+    assert not am.stopped
+    assert seen == []
+
+
+def test_three_escs_only_first_pair_counts() -> None:
+    """ESC1, ESC2 (within window) → stop. ESC3 must not re-fire."""
+    seen: list[str] = []
+    clock = FakeClock(0.0)
+    am = ActivityMonitor(
+        on_stop=seen.append,
+        double_esc_window=0.5,
+        clock=clock,
+    )
+    assert not am.mark_esc()
+    clock.advance(0.2)
+    assert am.mark_esc()  # stop fires here
+    clock.advance(0.1)
+    am.mark_esc()  # already stopped — must not re-fire
+    assert seen == ["double_esc"]
+
+
+def test_idle_timeout_thread() -> None:
+    """End-to-end exercise of the watcher thread with a real clock and
+    very short timeouts."""
+    seen: list[str] = []
+    am = ActivityMonitor(
+        on_stop=seen.append,
+        inactivity_seconds=0.2,
+        check_interval=0.05,
+    )
+    am.start()
+    try:
+        # Wait a hair longer than the timeout
+        deadline = time.time() + 1.0
+        while time.time() < deadline and not am.stopped:
+            time.sleep(0.05)
+        assert am.stopped
+        assert am.stop_reason == "idle_timeout"
+        assert seen == ["idle_timeout"]
+    finally:
+        am.stop()
+
+
+def test_activity_keeps_thread_alive() -> None:
+    """Repeated mark_activity calls prevent idle stop."""
+    seen: list[str] = []
+    am = ActivityMonitor(
+        on_stop=seen.append,
+        inactivity_seconds=0.3,
+        check_interval=0.05,
+    )
+    am.start()
+    try:
+        deadline = time.time() + 0.7
+        while time.time() < deadline:
+            am.mark_activity()
+            time.sleep(0.05)
+        assert not am.stopped
+    finally:
+        am.stop()
+
+
+def test_stop_callback_failure_is_swallowed() -> None:
+    def bad(_reason: str) -> None:
+        raise RuntimeError("boom")
+
+    am = ActivityMonitor(
+        on_stop=bad,
+        inactivity_seconds=0.1,
+        check_interval=0.02,
+    )
+    am.start()
+    try:
+        time.sleep(0.5)
+        # The watcher thread must not propagate exceptions.
+        assert am.stopped
+    finally:
+        am.stop()
+
+
+def test_invalid_constructor_args() -> None:
+    with pytest.raises(ValueError):
+        ActivityMonitor(on_stop=lambda r: None, inactivity_seconds=0)
+    with pytest.raises(ValueError):
+        ActivityMonitor(on_stop=lambda r: None, double_esc_window=-1)
+    with pytest.raises(ValueError):
+        ActivityMonitor(on_stop=lambda r: None, check_interval=0)
