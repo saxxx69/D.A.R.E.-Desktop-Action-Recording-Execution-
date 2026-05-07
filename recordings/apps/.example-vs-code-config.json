@@ -1,0 +1,8 @@
+{
+  "target_app": "Visual Studio Code",
+  "target_type": "native-app",
+  "platform": "macos-linux-windows",
+  "requires_env_vars": [],
+  "timeout_seconds": 30,
+  "notes": "VS Code file editing and command workflows"
+}
