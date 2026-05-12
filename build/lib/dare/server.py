@@ -103,13 +103,14 @@ def cmd_runs_list(_args: argparse.Namespace) -> int:
 
 
 def cmd_runs_show(args: argparse.Namespace) -> int:
-    rm = RunManager(run_id=args.run_id)
+    rm = RunManager()
     try:
-        meta = rm.metadata
+        run_id = rm.resolve(args.run_id)
     except (FileNotFoundError, ValueError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
-    print(json.dumps(meta.to_dict(), indent=2))
+    meta = rm.metadata(run_id)
+    print(meta.to_json())
     return 0
 
 

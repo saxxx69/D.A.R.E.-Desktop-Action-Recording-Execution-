@@ -20,11 +20,11 @@ from typing import Optional
 STAGES = [
     "record",
     "normalize",
-    "generate_dsl",
-    "build_intents",
-    "clarify",
-    "validate",
-    "execute",
+    "dsl_generation",
+    "classification",
+    "validation",
+    "execution",
+    "mcp_export",
 ]
 
 # ----- RunMetadata ----------------------------------------------------------
@@ -79,32 +79,6 @@ class RunManager:
 
         self._metadata = self._load_or_create_metadata()
 
-    def create(self, notes: Optional[str] = None) -> RunMetadata:
-        """Create a new run."""
-        if notes:
-            (self.run_dir / "notes.txt").write_text(notes)
-        return self._metadata
-
-    def path(self, run_id: str) -> Path:
-        """Get path for run ID."""
-        return Path("./runs") / run_id
-
-    def resolve(self, run_id: str) -> str:
-        """Resolve run ID (return as-is)."""
-        return run_id
-
-    def set_stage(self, run_id: str, stage: str) -> None:
-        """Set current stage."""
-        pass
-
-    def fail_stage(self, run_id: str, stage: str, error: str) -> None:
-        """Mark stage as failed."""
-        pass
-
-    def complete_stage(self, run_id: str, stage: str, data: Optional[dict] = None) -> None:
-        """Mark stage as complete."""
-        pass
-
     def _load_or_create_metadata(self) -> RunMetadata:
         """Load existing metadata or create new."""
         if self._metadata_file.exists():
@@ -148,18 +122,8 @@ class RunManager:
         )
         self._save_metadata()
 
-    def complete_stage(self, run_id_or_stage: str, stage_or_data: Optional[str] = None, data: Optional[dict] = None) -> None:
-        """Mark a stage as completed. Can be called as:
-        - complete_stage(stage_name, data_dict)
-        - complete_stage(run_id, stage_name, data_dict)
-        """
-        # Handle both calling conventions
-        if stage_or_data is None:
-            stage = run_id_or_stage
-        else:
-            stage = stage_or_data
-            data = data if data is not None else None
-
+    def complete_stage(self, stage: str, data: Optional[dict] = None) -> None:
+        """Mark a stage as completed."""
         if stage not in STAGES:
             raise ValueError(f"Unknown stage: {stage}")
 
